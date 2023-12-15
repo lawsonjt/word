@@ -1,93 +1,106 @@
-import Tile from './Tile'
-import Words from './Words'
+import Tile from "./Tile";
+import { allWords, theWords } from "./Words";
 
 export default {
-    guessesAllowed: 3,
-    wordLength: 3, // todo
-    theWord: 'cat',
+    guessesAllowed: 5,
+    theWord: theWords[Math.floor(Math.random() * theWords.length)],
     currentRowIndex: 0,
-    state: 'active', // pending, active, complete
+    state: "active",
     errors: false,
-    message: '',
+    message: "",
+
+    letters: [
+        "QWERTYUIOP".split(""),
+        "ASDFGHJKL".split(""),
+        ["Enter", ..."ZXCVBNM".split(""), "Backspace"],
+    ],
 
     get currentRow() {
-        return this.board[this.currentRowIndex]
+        return this.board[this.currentRowIndex];
     },
 
     get currentGuess() {
-        return this.currentRow.map(tile => tile.letter).join('')
+        return this.currentRow.map((tile) => tile.letter).join("");
     },
 
     get remainingGuesses() {
-        return this.guessesAllowed - this.currentRowIndex - 1
+        return this.guessesAllowed - this.currentRowIndex - 1;
     },
 
     init() {
-        this.board = Array.from({length: this.guessesAllowed}, () => {
-            return Array.from({length: this.theWord.length}, () => new Tile)
-        })
+        this.board = Array.from({ length: this.guessesAllowed }, () => {
+            return Array.from(
+                { length: this.theWord.length },
+                (item, index) => new Tile(index)
+            );
+        });
     },
 
     onKeyPress(key) {
-        this.message = ''
-        this.errors = false
+        this.message = "";
+        this.errors = false;
 
         if (/^[A-z]$/.test(key)) {
-            this.fillTile(key)
-        } else if (key === 'Backspace') {
-            this.emptyTile()
-        } else if (key === 'Enter') {
-            this.submitGuess()
+            this.fillTile(key);
+        } else if (key === "Backspace") {
+            this.emptyTile();
+        } else if (key === "Enter") {
+            this.submitGuess();
         }
     },
 
     fillTile(key) {
         for (let tile of this.currentRow) {
             if (!tile.letter) {
-                tile.fill(key)
-                break
-            }
+                tile.fill(key);
 
+                break;
+            }
         }
     },
 
     emptyTile() {
         for (let tile of [...this.currentRow].reverse()) {
             if (tile.letter) {
-                tile.empty()
-                break
-            }
+                tile.empty();
 
+                break;
+            }
         }
     },
 
     submitGuess() {
         if (this.currentGuess.length < this.theWord.length) {
-            return
+            return;
         }
 
-        if (! Words.includes(this.currentGuess.toUpperCase())) {
-            this.errors = true
-            return this.message = 'Invalid word...'
+        if (!allWords.includes(this.currentGuess.toUpperCase())) {
+            this.errors = true;
+            this.message = "Invalid word...";
+
+            return;
         }
 
-        for (let tile of this.currentRow) {
-            tile.updateStatus(this.currentGuess, this.theWord)
-        }
+        Tile.updateStatusesForRow(this.currentRow, this.theWord);
 
         if (this.currentGuess === this.theWord) {
-            this.state = 'complete'
+            this.state = "complete";
+            this.message = "You Win!";
 
-            return this.message = 'You Win!'
+            confetti();
+        } else if (this.remainingGuesses === 0) {
+            this.state = "complete";
+            this.message = `Game Over. You Lose. (${this.theWord})`;
+        } else {
+            this.currentRowIndex++;
         }
-        if (this.remainingGuesses === 0) {
-            this.state = 'complete'
+    },
 
-            return this.message = 'Game Over. You Lose.'
-        }
-
-        this.currentRowIndex++
-
-        return this.message = 'Incorrect.'
-    }
-}
+    matchingTileForKey(key) {
+        return this.board
+            .flat()
+            .filter((tile) => tile.status)
+            .sort((t1, t2) => t2.status === "correct")
+            .find((tile) => tile.letter === key.toLowerCase());
+    },
+};
